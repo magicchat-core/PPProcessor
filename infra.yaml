@@ -127,7 +127,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: fetch_all_ls_of_connected_users
+      PathPart: all_payments
 
   AllPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
@@ -160,7 +160,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: add_ls_user
+      PathPart: add_payment
 
   AddPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
@@ -193,7 +193,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: update_ls_user
+      PathPart: update_payment
 
   UpdatePPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
@@ -226,7 +226,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: get_app
+      PathPart: get_payment
 
   GetPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method

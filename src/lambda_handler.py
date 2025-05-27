@@ -8,10 +8,10 @@ stack_prefix = os.environ.get('StackPrefix')
 def lambda_function(event, context):
     try:
         path = event.get("path", "")
-        if path == f"/{stack_prefix}/fetch_all_ls_of_connected_users":
+        if path == f"/{stack_prefix}/all_payments":
             return standard_response(501, {"error": "Not Implemented"})
 
-        elif path == f"/{stack_prefix}/get_app":
+        elif path == f"/{stack_prefix}/get_payment":
             query_params = event.get("queryStringParameters", {}) or {}
             token = event.get('headers', {}).get('Authorization')
             x_api_key = event.get('headers', {}).get('x-api-key')
@@ -39,12 +39,12 @@ def lambda_function(event, context):
             # result = {"anmy":"thing"}
             return standard_response(200, result)
 
-        elif path == f"/{stack_prefix}/add_ls_user":
+        elif path == f"/{stack_prefix}/add_payment":
             body = parse_body(event)
             result = add_ls(body)
             return standard_response(200, result)
 
-        elif path == f"/{stack_prefix}/update_ls_user":
+        elif path == f"/{stack_prefix}/update_payment":
             token = event.get('headers', {}).get('Authorization')
             body = parse_body(event)
 
