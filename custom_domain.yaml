@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Conditions:
+  IsProd: !Equals [!Ref StackPrefix, "prod"]
+  UseCustomDomain: !Or
+    - !Equals [!Ref StackPrefix, "prod"]
+    - !Equals [!Ref StackPrefix, "dev"]
+
+Parameters:
+  StackPrefix:
+    Type: String
+    Description: "Prefix to distinguish different environments (e.g., prod, dev)."
+
+  HostedZoneName:
+    Type: String
+    Description: "The name of the Route 53 hosted zone (e.g., example.com)."
+
+  HostedZoneId:
+    Type: String
+    Description: "The ID of the Route 53 hosted zone."
+
+  CertArn:
+    Type: String
+    Description: "The ARN of the ACM certificate."
+
+
+Resources:
+  MyApiGatewayCustomDomain:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: !If 
+        - IsProd
+        - !Sub "livestatus.${HostedZoneName}"
+        - !Sub "livestatus.${HostedZoneName}"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      RegionalCertificateArn: !Ref CertArn #!Sub "livestatus.${CertArn}"
+
+  ApiGatewayDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Sub "${HostedZoneId}" #Z0713577I1DBW766CFL9  # Use the HostedZoneId directly
+      Name: !If 
+        - IsProd
+        - !Sub "livestatus.${HostedZoneName}"
+        - !Sub "livestatus.${HostedZoneName}"
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt MyApiGatewayCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt MyApiGatewayCustomDomain.RegionalHostedZoneId
+
+
+Outputs:
+  CustomDomainName:
+    Value: !Ref MyApiGatewayCustomDomain
+    Export:
+      Name: !Sub "${StackPrefix}-livestatus-CustomDomainName"
