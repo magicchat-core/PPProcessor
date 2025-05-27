@@ -1,5 +1,3 @@
-
-
 Parameters:
   StackPrefix:
     Type: String
@@ -11,38 +9,30 @@ Parameters:
   ReqZipKey:
     Type: String
 
-
 Conditions:
   IsProd: !Equals [!Ref StackPrefix, "prod"]
   UseCustomDomain: !Or
     - !Equals [!Ref StackPrefix, "prod"]
     - !Equals [!Ref StackPrefix, "dev"]
 
-
-
 Resources:
-
   DynamoDBTable1:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${StackPrefix}-LiveStatusData"
+      TableName: !Sub "${StackPrefix}-PPProcessorData"
       AttributeDefinitions:
         - AttributeName: tenant
-          AttributeType: S  # String type for partition key
+          AttributeType: S # String type for partition key
         - AttributeName: sort_key
-          AttributeType: S  # String type for sort key
+          AttributeType: S # String type for sort key
       KeySchema:
         - AttributeName: tenant
-          KeyType: HASH  # Partition key
+          KeyType: HASH # Partition key
         - AttributeName: sort_key
-          KeyType: RANGE  # Sort key
+          KeyType: RANGE # Sort key
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
-
-
-
-
 
   LambdaLayer:
     Type: AWS::Lambda::LayerVersion
@@ -50,10 +40,10 @@ Resources:
       CompatibleRuntimes:
         - python3.9
       Content:
-        # S3Bucket: live-status-bckt
-        S3Bucket: !Sub "${StackPrefix}-live-status-bckt"
+        # S3Bucket: ppprocessor-bckt
+        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
         S3Key: !Ref ReqZipKey
-        
+
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -61,26 +51,24 @@ Resources:
       FunctionName: !Sub "${StackPrefix}-LiveStatusHandlerLambda"
       Runtime: python3.9
       Handler: lambda_handler.lambda_function
-      Role: !GetAtt LiveStatusLambdaExecutionLiveStatussRole.Arn
+      Role: !GetAtt PPProcessorLambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub "${StackPrefix}-live-status-bckt"
+        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
         S3Key: !Ref LambdaZipKey
 
       Environment:
         Variables:
           StackPrefix: !Ref StackPrefix
 
-
-
       Timeout: 30
-      Layers: 
+      Layers:
         - !Ref LambdaLayer
 
-  LiveStatusLambdaExecutionLiveStatussRole:
+  PPProcessorLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      # RoleName: LiveStatusLambdaExecutionLiveStatussRole
-      RoleName: !Sub "${StackPrefix}-LiveStatusLambdaExecutionLiveStatussRole"
+      # RoleName: PPProcessorLambdaExecutionRole
+      RoleName: !Sub "${StackPrefix}-PPProcessorLambdaExecutionRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -91,21 +79,19 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-
         - PolicyName: DynamoDBAccessPolicy
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
-                  - 'dynamodb:PutItem'
-                  - 'dynamodb:GetItem'
-                  - 'dynamodb:UpdateItem'
-                  - 'dynamodb:Scan'
-                  - 'dynamodb:Query'
-                  - 'dynamodb:BatchGetItem'
+                  - "dynamodb:PutItem"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:UpdateItem"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                  - "dynamodb:BatchGetItem"
                 Resource: !GetAtt DynamoDBTable1.Arn
-
 
         - PolicyName: S3AccessPolicy
           PolicyDocument:
@@ -114,12 +100,12 @@ Resources:
               - Effect: Allow
                 Action:
                   - "s3:ListBucket"
-                Resource: !Sub "arn:aws:s3:::${StackPrefix}-live-status-bckt"
+                Resource: !Sub "arn:aws:s3:::${StackPrefix}-ppprocessor-bckt"
 
               - Effect: Allow
                 Action:
                   - "s3:GetObject"
-                Resource: !Sub "arn:aws:s3:::${StackPrefix}-live-status-bckt/*"
+                Resource: !Sub "arn:aws:s3:::${StackPrefix}-ppprocessor-bckt/*"
 
             # Statement:
             #   - Effect: Allow
@@ -127,8 +113,8 @@ Resources:
             #       - "s3:ListBucket"
             #       - "s3:GetObject"
             #     Resource:
-            #       - "arn:aws:s3:::live-status-bckt"
-            #       - "arn:aws:s3:::live-status-bckt/*"
+            #       - "arn:aws:s3:::ppprocessor-bckt"
+            #       - "arn:aws:s3:::ppprocessor-bckt/*"
 
   ApiGateway:
     Type: AWS::ApiGateway::RestApi
@@ -202,15 +188,12 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-
-
   UpdateLiveStatusAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: update_ls_user
-
 
   UpdateLiveStatusApiGatewayMethod:
     Type: AWS::ApiGateway::Method
@@ -237,8 +220,6 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
-
-
 
   GetLiveStatusAGResource:
     Type: AWS::ApiGateway::Resource
@@ -291,7 +272,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -318,7 +299,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -345,7 +326,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -353,7 +334,6 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
-
 
   UpdateLiveStatusApiGatewayOptions:
     Type: AWS::ApiGateway::Method
@@ -373,7 +353,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -382,23 +362,17 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-
-
-
   MyApiGatewayBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
       # DomainName: !Ref MyApiGatewayCustomDomain
       DomainName: !If
         - UseCustomDomain
-        - !ImportValue 
-            Fn::Sub: "${StackPrefix}-livestatus-CustomDomainName"
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-livestatus-CustomDomainName"
         - !Ref "AWS::NoValue"
       RestApiId: !Ref ApiGateway
       # Stage: !Ref MyApiGatewayStage
-
-
-
 
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -407,7 +381,7 @@ Resources:
       - AddLiveStatusApiGatewayMethod
       - GetLiveStatusApiGatewayMethod
       - UpdateLiveStatusApiGatewayMethod
-      
+
     Properties:
       RestApiId: !Ref ApiGateway
 

@@ -13,7 +13,7 @@ dynamodb = boto3.resource('dynamodb')
 
 class LiveStatusManager:
     def __init__(self):
-        self.table = dynamodb.Table(f"{stack_prefix}-LiveStatusData")
+        self.table = dynamodb.Table(f"{stack_prefix}-PPProcessorData")
 
     def add_ls(self, request_body):
         version = request_body.get('version', "Unknown")
@@ -142,7 +142,7 @@ class LiveStatusManager:
 
 class UserService:
     def __init__(self):
-        self.table = dynamodb.Table(f"{stack_prefix}-LiveStatusData")
+        self.table = dynamodb.Table(f"{stack_prefix}-PPProcessorData")
         self.auth_endpoint = "https://auth.magichat.io/prod/me" if stack_prefix == "prod" else "https://auth.addchat.tech/dev/me"
 
     # Fix decorator to accept self properly and work on instance methods
@@ -309,7 +309,7 @@ class UserService:
 
             # Initialize DynamoDB table
             dynamodb = boto3.resource('dynamodb')
-            table = dynamodb.Table(stack_prefix + '-LiveStatusData')
+            table = dynamodb.Table(stack_prefix + '-PPProcessorData')
 
             # Extract required fields
             version = extra.get('version')
