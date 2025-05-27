@@ -3,7 +3,7 @@ import os
 import requests
 from functools import wraps
 from http import HTTPStatus
-from utils import get_all_payments, get_payment_by_id, add_payment, update_payment
+from utils import get_all_payments, get_payment_by_id, add_payment, update_payment, get_tenant_plan
 from datetime import datetime
 from decimal import Decimal
 
@@ -110,6 +110,16 @@ def lambda_function(event, context):
             response = handler.add_payment(token, body)
         elif path.endswith(f"/update_payment") and method == "PUT":
             response = handler.update_payment(token, body)
+
+        elif path.endswith("/get_tenant_plan") and method == "GET":
+            tenant_id = query.get("tenant_id")
+            if not tenant_id:
+                raise HTTPException("Missing tenant_id", HTTPStatus.BAD_REQUEST)
+            plan = get_tenant_plan(tenant_id)
+            return {
+                "statusCode": HTTPStatus.OK,
+                "body": json.dumps({"success": True, "plan": plan}, cls=DecimalEncoder)
+            }
         else:
             raise HTTPException("Invalid path or method", HTTPStatus.NOT_FOUND)
 

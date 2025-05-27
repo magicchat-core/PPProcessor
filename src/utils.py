@@ -1,3 +1,4 @@
+import os
 import boto3
 import uuid
 from boto3.dynamodb.conditions import Key
@@ -5,6 +6,15 @@ from datetime import datetime
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table("dev-Payments")  # adjust table name if needed
+
+stack_prefix = os.environ.get("StackPrefix", "dev")
+
+# New function to get tenant plan
+def get_tenant_plan(tenant_id):
+    tenant_plans_table = dynamodb.Table(f"{stack_prefix}-TenantPlans")
+    response = tenant_plans_table.get_item(Key={'tenant_id': tenant_id})
+    return response.get('Item', {}).get('plan', 'BASIC')
+
 
 
 def get_all_payments(tenant_id, **query):
