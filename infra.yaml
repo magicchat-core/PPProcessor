@@ -103,7 +103,9 @@ Resources:
                   - "dynamodb:Scan"
                   - "dynamodb:Query"
                   - "dynamodb:BatchGetItem"
-                Resource: !GetAtt DynamoDBTable1.Arn
+                Resource: 
+                - !GetAtt DynamoDBTable1.Arn
+                - !Sub "${DynamoDBTable1.Arn}/index/PaymentIdIndex"
 
         - PolicyName: S3AccessPolicy
           PolicyDocument:
