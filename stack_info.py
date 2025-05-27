@@ -7,7 +7,7 @@ infra_template_file = "infra.yaml"
 custom_domain_template_file = "custom_domain.yaml"
 infra_stack_name = "-PPProcessortck" #change this
 capabilities = "CAPABILITY_NAMED_IAM"
-custom_stack_name_suffix = "-livestatus-custom-domain"
+custom_stack_name_suffix = "-ppprocessor-custom-domain"
 
 # Define Hosted Zone details
 hosted_zone_details = {

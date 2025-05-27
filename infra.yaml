@@ -369,7 +369,7 @@ Resources:
       DomainName: !If
         - UseCustomDomain
         - !ImportValue
-          Fn::Sub: "${StackPrefix}-livestatus-CustomDomainName"
+          Fn::Sub: "${StackPrefix}-ppprocessor-CustomDomainName"
         - !Ref "AWS::NoValue"
       RestApiId: !Ref ApiGateway
       # Stage: !Ref MyApiGatewayStage
