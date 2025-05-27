@@ -61,6 +61,7 @@ Resources:
         WriteCapacityUnits: 1
 
 
+
   LambdaLayer:
     Type: AWS::Lambda::LayerVersion
     Properties:
@@ -261,7 +262,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: get_payment
+      PathPart: get_tenant_plan
 
   GetTenantPlanApiGatewayMethod:
     Type: AWS::ApiGateway::Method
@@ -479,6 +480,7 @@ Resources:
       - AddPPProcessorApiGatewayMethod
       - GetPPProcessorApiGatewayMethod
       - UpdatePPProcessorApiGatewayMethod
+      - GetTenantPlanApiGatewayMethod
 
     Properties:
       RestApiId: !Ref ApiGateway
