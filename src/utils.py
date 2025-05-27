@@ -1,136 +1,74 @@
+# utils.py
 import os
 import boto3
 import uuid
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
+from decimal import Decimal
 
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table("dev-Payments")  # adjust table name if needed
-
-stack_prefix = os.environ.get("StackPrefix", "dev")
-
-# New function to get tenant plan
-def get_tenant_plan(tenant_id):
-    tenant_plans_table = dynamodb.Table(f"{stack_prefix}-TenantPlans")
-    response = tenant_plans_table.get_item(Key={'tenant_id': tenant_id})
-    return response.get('Item', {}).get('plan', 'BASIC')
+stack_prefix = os.environ.get("STACK_PREFIX", "dev")
 
 
+class PaymentManager:
+    def __init__(self):
+        self.table = dynamodb.Table(f"{stack_prefix}-Payments")
 
-def get_all_payments(tenant_id, **query):
-    try:
-        # Query on tenant_id as partition key
-        response = table.query(
+    def get_all(self, tenant_id, **kwargs):
+        return self.table.query(
             KeyConditionExpression=Key('tenant_id').eq(tenant_id)
-        )
-        return response.get("Items", [])
-    except Exception as e:
-        print("Error in get_all_payments:", e)
-        raise
+        )['Items']
 
-
-def get_payment_by_id(tenant_id, payment_id):
-    try:
-        # DynamoDB primary key assumed: tenant_id + created_on
-        # You don't have created_on, so use GSI query by payment_id to get the item
-        response = table.query(
-            IndexName='PaymentIdIndex',  # Your GSI on payment_id
-            KeyConditionExpression=Key('payment_id').eq(payment_id)
-        )
-        items = response.get("Items", [])
-        # Ensure that tenant_id matches too (for security)
-        for item in items:
-            if item.get('tenant_id') == tenant_id:
-                return item
-
-        return None
-
-    except Exception as e:
-        print("Error in get_payment_by_id:", e)
-        raise
-
-
-def add_payment(tenant_id, payment_data):
-    try:
-        payment_id = str(uuid.uuid4())
-        item = {
-            "tenant_id": tenant_id,
-            "payment_id": payment_id,
-            **payment_data
-        }
-        table.put_item(Item=item)
-        return item
-    except Exception as e:
-        print("Error in add_payment:", e)
-        raise
-
-
-def update_payment(tenant_id, payment_id, payment_data):
-    try:
-        # Query item by payment_id GSI
-        response = table.query(
+    def get_by_id(self, tenant_id, payment_id):
+        items = self.table.query(
             IndexName='PaymentIdIndex',
             KeyConditionExpression=Key('payment_id').eq(payment_id)
+        )['Items']
+        return next((i for i in items if i['tenant_id'] == tenant_id), None)
+
+    def create(self, tenant_id, data):
+        item = {
+            'tenant_id': tenant_id,
+            'payment_id': str(uuid.uuid4()),
+            'created_on': datetime.utcnow().isoformat(),
+            **data
+        }
+        self.table.put_item(Item=item)
+        return item
+
+    def update(self, tenant_id, payment_id, data):
+        item = self.get_by_id(tenant_id, payment_id)
+        if not item:
+            raise ValueError("Payment not found")
+            
+        data['updated_on'] = datetime.utcnow().isoformat()
+        update_expr = "SET " + ", ".join(
+            f"{k}=:{k}" for k in data if k not in ['tenant_id', 'payment_id']
         )
-        items = response.get('Items', [])
-        if not items:
-            raise Exception("Payment not found")
-
-        # Verify tenant_id matches
-        item = None
-        for i in items:
-            if i.get('tenant_id') == tenant_id:
-                item = i
-                break
-
-        if item is None:
-            raise Exception("Payment not found or access denied")
-
-        created_on = item['created_on']
-
-        # Prepare update expressions
-        update_expr = []
-        expr_attrs = {}
-        expr_attr_names = {}
-
-        # Set updated_on timestamp
-        payment_data["updated_on"] = datetime.utcnow().isoformat()
-
-        for key, value in payment_data.items():
-            if key in ["tenant_id", "created_on", "payment_id"]:
-                continue
-            if key == "status":
-                expr_attr_names[f"#{key}"] = key
-                placeholder = f"#{key}"
-            else:
-                placeholder = key
-
-            value_placeholder = f":{key}"
-            update_expr.append(f"{placeholder} = {value_placeholder}")
-            expr_attrs[value_placeholder] = value
-
-        update_expression = "SET " + ", ".join(update_expr)
-
-        table.update_item(
-            Key={
-                "tenant_id": tenant_id,
-                "created_on": created_on
-            },
-            UpdateExpression=update_expression,
-            ExpressionAttributeNames=expr_attr_names if expr_attr_names else None,
-            ExpressionAttributeValues=expr_attrs
-        )
-
-        # Return updated item
-        updated_item = table.get_item(
-            Key={
-                "tenant_id": tenant_id,
-                "created_on": created_on
+        
+        self.table.update_item(
+            Key={'tenant_id': tenant_id, 'created_on': item['created_on']},
+            UpdateExpression=update_expr,
+            ExpressionAttributeValues={
+                f":{k}": v for k, v in data.items() 
+                if k not in ['tenant_id', 'payment_id']
             }
-        ).get('Item')
+        )
+        return self.get_by_id(tenant_id, payment_id)
 
-        return updated_item
 
-    except Exception as e:
-        print("Error in update_payment:", e)
-        raise
+class PlanManager:
+    def __init__(self):
+        self.table = dynamodb.Table(f"{stack_prefix}-TenantPlans")
+
+    def get_plan(self, tenant_id):
+        response = self.table.get_item(Key={'tenant_id': tenant_id})
+        return response.get('Item', {}).get('plan', 'BASIC')
+
+    def update_plan(self, tenant_id, new_plan):
+        self.table.update_item(
+            Key={'tenant_id': tenant_id},
+            UpdateExpression="SET plan = :plan",
+            ExpressionAttributeValues={':plan': new_plan}
+        )
+        return self.get_plan(tenant_id)
