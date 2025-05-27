@@ -19,17 +19,29 @@ Resources:
   DynamoDBTable1:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${StackPrefix}-PPProcessorData"
+      TableName: !Sub "${StackPrefix}-Payments"
       AttributeDefinitions:
-        - AttributeName: tenant
-          AttributeType: S # String type for partition key
-        - AttributeName: sort_key
-          AttributeType: S # String type for sort key
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: created_on
+          AttributeType: S
+        - AttributeName: payment_id
+          AttributeType: S
       KeySchema:
-        - AttributeName: tenant
-          KeyType: HASH # Partition key
-        - AttributeName: sort_key
-          KeyType: RANGE # Sort key
+        - AttributeName: tenant_id
+          KeyType: HASH
+        - AttributeName: created_on
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: PaymentIdIndex
+          KeySchema:
+            - AttributeName: payment_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
