@@ -47,8 +47,8 @@ Resources:
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      # FunctionName: LiveStatusHandlerLambda
-      FunctionName: !Sub "${StackPrefix}-LiveStatusHandlerLambda"
+      # FunctionName: PPProcessorHandlerLambda
+      FunctionName: !Sub "${StackPrefix}-PPProcessorHandlerLambda"
       Runtime: python3.9
       Handler: lambda_handler.lambda_function
       Role: !GetAtt PPProcessorLambdaExecutionRole.Arn
@@ -122,18 +122,18 @@ Resources:
     Properties:
       Name: ApiGateway
 
-  AllLiveStatusAGResource:
+  AllPPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: fetch_all_ls_of_connected_users
 
-  AllLiveStatusApiGatewayMethod:
+  AllPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref AllLiveStatusAGResource
+      ResourceId: !Ref AllPPProcessorAGResource
       HttpMethod: GET
       AuthorizationType: NONE
       Integration:
@@ -155,18 +155,18 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  AddLiveStatusAGResource:
+  AddPPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: add_ls_user
 
-  AddLiveStatusApiGatewayMethod:
+  AddPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref AddLiveStatusAGResource
+      ResourceId: !Ref AddPPProcessorAGResource
       HttpMethod: POST
       AuthorizationType: NONE
       Integration:
@@ -188,18 +188,18 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  UpdateLiveStatusAGResource:
+  UpdatePPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: update_ls_user
 
-  UpdateLiveStatusApiGatewayMethod:
+  UpdatePPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref UpdateLiveStatusAGResource
+      ResourceId: !Ref UpdatePPProcessorAGResource
       HttpMethod: PUT
       AuthorizationType: NONE
       Integration:
@@ -221,18 +221,18 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  GetLiveStatusAGResource:
+  GetPPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: get_app
 
-  GetLiveStatusApiGatewayMethod:
+  GetPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref GetLiveStatusAGResource
+      ResourceId: !Ref GetPPProcessorAGResource
       HttpMethod: GET
       AuthorizationType: NONE
       Integration:
@@ -254,10 +254,10 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  AllLiveStatusApiGatewayOptions:
+  AllPPProcessorApiGatewayOptions:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref AllLiveStatusAGResource
+      ResourceId: !Ref AllPPProcessorAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -281,10 +281,10 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  GetLiveStatusApiGatewayOptions:
+  GetPPProcessorApiGatewayOptions:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref GetLiveStatusAGResource
+      ResourceId: !Ref GetPPProcessorAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -308,10 +308,10 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  AddLiveStatusApiGatewayOptions:
+  AddPPProcessorApiGatewayOptions:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref AddLiveStatusAGResource
+      ResourceId: !Ref AddPPProcessorAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -335,10 +335,10 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  UpdateLiveStatusApiGatewayOptions:
+  UpdatePPProcessorApiGatewayOptions:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref UpdateLiveStatusAGResource
+      ResourceId: !Ref UpdatePPProcessorAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -377,10 +377,10 @@ Resources:
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - AllLiveStatusApiGatewayMethod
-      - AddLiveStatusApiGatewayMethod
-      - GetLiveStatusApiGatewayMethod
-      - UpdateLiveStatusApiGatewayMethod
+      - AllPPProcessorApiGatewayMethod
+      - AddPPProcessorApiGatewayMethod
+      - GetPPProcessorApiGatewayMethod
+      - UpdatePPProcessorApiGatewayMethod
 
     Properties:
       RestApiId: !Ref ApiGateway

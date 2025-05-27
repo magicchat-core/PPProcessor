@@ -23,15 +23,14 @@ Parameters:
     Type: String
     Description: "The ARN of the ACM certificate."
 
-
 Resources:
   MyApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
     Properties:
-      DomainName: !If 
+      DomainName: !If
         - IsProd
-        - !Sub "ppprocessor.${HostedZoneName}"
-        - !Sub "ppprocessor.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
       EndpointConfiguration:
         Types:
           - REGIONAL
@@ -41,15 +40,14 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Sub "${HostedZoneId}" #Z0713577I1DBW766CFL9  # Use the HostedZoneId directly
-      Name: !If 
+      Name: !If
         - IsProd
-        - !Sub "ppprocessor.${HostedZoneName}"
-        - !Sub "ppprocessor.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
       Type: A
       AliasTarget:
         DNSName: !GetAtt MyApiGatewayCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt MyApiGatewayCustomDomain.RegionalHostedZoneId
-
 
 Outputs:
   CustomDomainName:
