@@ -608,7 +608,10 @@ Resources:
       - AddPPProcessorApiGatewayMethod
       - GetPPProcessorApiGatewayMethod
       - UpdatePPProcessorApiGatewayMethod
+
       - GetTenantPlanApiGatewayMethod
+      - AddTenantPlanApiGatewayMethod
+      - UpdateTenantPlanApiGatewayMethod
 
     Properties:
       RestApiId: !Ref ApiGateway
