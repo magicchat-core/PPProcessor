@@ -44,7 +44,7 @@ class PaymentManager:
             "currency": currency,
             "payment_capture": 1
         })
-        print("make rzorapya done",order)
+        print("make rzorapya done", order)
 
         return order
 
@@ -76,18 +76,35 @@ class PaymentManager:
             raise ValueError("Payment not found")
 
         data['updated_on'] = datetime.utcnow().isoformat()
-        update_expr = "SET " + ", ".join(
-            f"{k}=:{k}" for k in data if k not in ['tenant_id', 'payment_id']
-        )
 
-        self.table.update_item(
-            Key={'tenant_id': tenant_id, 'created_on': item['created_on']},
-            UpdateExpression=update_expr,
-            ExpressionAttributeValues={
-                f":{k}": v for k, v in data.items()
-                if k not in ['tenant_id', 'payment_id']
-            }
-        )
+        # Prepare UpdateExpression, ExpressionAttributeValues, and ExpressionAttributeNames
+        update_clauses = []
+        expr_values = {}
+        expr_names = {}
+
+        for k, v in data.items():
+            if k in ['tenant_id', 'payment_id']:
+                continue
+            placeholder = f":{k}"
+            attr_name = f"#{k}" if k.lower() in ['plan'] else k
+            update_clauses.append(f"{attr_name} = {placeholder}")
+            expr_values[placeholder] = v
+            if attr_name.startswith('#'):
+                expr_names[attr_name] = k
+
+        update_expr = "SET " + ", ".join(update_clauses)
+
+        kwargs = {
+            "Key": {'tenant_id': tenant_id, 'created_on': item['created_on']},
+            "UpdateExpression": update_expr,
+            "ExpressionAttributeValues": expr_values
+        }
+
+        if expr_names:
+            kwargs["ExpressionAttributeNames"] = expr_names
+
+        self.table.update_item(**kwargs)
+
         return self.get_by_id(tenant_id, payment_id)
 
 
@@ -100,17 +117,21 @@ class PlanManager:
         return response.get('Item', {}).get('plan', 'BASIC')
 
     def add_plan(self, tenant_id, plan):
-        self.table.put_item(Item={
+        print("arrrrr v here?", str(tenant_id), plan)
+        res = self.table.put_item(Item={
             'tenant_id': tenant_id,
             'plan': plan,
             'created_on': datetime.utcnow().isoformat()
         })
+        print("done", res)
         return self.get_plan(tenant_id)
 
     def update_plan(self, tenant_id, new_plan):
-        self.table.update_item(
+        response = self.table.update_item(
             Key={'tenant_id': tenant_id},
-            UpdateExpression="SET plan = :plan",
-            ExpressionAttributeValues={':plan': new_plan}
+            UpdateExpression="SET #p = :val1",
+            ExpressionAttributeNames={'#p': 'plan'},
+            ExpressionAttributeValues={':val1': new_plan},
+            ReturnValues="UPDATED_NEW"
         )
-        return self.get_plan(tenant_id)
+        return response

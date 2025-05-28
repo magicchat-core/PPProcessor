@@ -7,24 +7,23 @@ from http import HTTPStatus
 from utils import PaymentManager, PlanManager
 from datetime import datetime
 from decimal import Decimal
+from botocore.exceptions import ClientError
 
 print("arewevener?")
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
             return int(obj) if obj % 1 == 0 else float(obj)
         return super().default(obj)
 
-
 stack_prefix = os.environ.get("STACK_PREFIX", "dev")
-
 
 class HTTPException(Exception):
     def __init__(self, message, status_code=400):
         super().__init__(message)
         self.status_code = status_code
         self.message = message
-
 
 def get_me_by_token(func):
     @wraps(func)
@@ -50,7 +49,6 @@ def get_me_by_token(func):
         kwargs["me"] = response.json()
         return func(self, token, *args, **kwargs)
     return wrapper
-
 
 class PaymentHandler:
     def __init__(self):
@@ -102,11 +100,21 @@ class PaymentHandler:
 
             body['tenant_id'] = me['id']
             body['verified_on'] = datetime.utcnow().isoformat()
-            return self.manager.create(me['id'], body)
+
+            payment = self.manager.create(me['id'], body)
+
+            try:
+                print("aerweorhwerwer?here")
+                plan_manager = PlanManager()
+                print("fsfssdfme['id']",me['id'],plan_manager)
+                plan_manager.update_plan(me['id'], "ADVANCE")
+            except Exception as e:
+                print(f"Plan upgrade failed: {e}")
+
+            return payment
 
         else:
             raise HTTPException("Invalid action", HTTPStatus.BAD_REQUEST)
-
 
     @get_me_by_token
     def update_payment(self, token, body, me):
@@ -114,7 +122,6 @@ class PaymentHandler:
         if not payment_id:
             raise HTTPException("Missing payment_id", HTTPStatus.BAD_REQUEST)
         return self.manager.update(me['id'], payment_id, body)
-
 
 class PlanHandler:
     def __init__(self):
@@ -124,10 +131,10 @@ class PlanHandler:
     def get_tenant_plan(self, token, query, me):
         return self.manager.get_plan(me['id'])
 
-    @get_me_by_token
-    def add_tenant_plan(self, token, body, me):
+    def add_tenant_plan(self, body):
         plan = body.get("plan", "BASIC")
-        return self.manager.add_plan(me['id'], plan)
+        print("wtuheoytewrt")
+        return self.manager.add_plan(body['tenant_id'], plan)
 
     @get_me_by_token
     def update_tenant_plan(self, token, body, me):
@@ -135,7 +142,6 @@ class PlanHandler:
         if not new_plan:
             raise HTTPException("Missing plan", HTTPStatus.BAD_REQUEST)
         return self.manager.update_plan(me['id'], new_plan)
-
 
 def lambda_function(event, context):
     path = event.get("path", "")
@@ -160,10 +166,9 @@ def lambda_function(event, context):
         elif path.endswith("/get_tenant_plan") and method == "GET":
             response = plan_handler.get_tenant_plan(token, query)
         elif path.endswith("/add_tenant_plan") and method == "POST":
-            response = plan_handler.add_tenant_plan(token, body)
+            response = plan_handler.add_tenant_plan(body)
         elif path.endswith("/update_tenant_plan") and method == "PUT":
             response = plan_handler.update_tenant_plan(token, body)
-            
         else:
             raise HTTPException("Not Found", HTTPStatus.NOT_FOUND)
 
@@ -185,6 +190,7 @@ def lambda_function(event, context):
             "body": json.dumps({"success": False, "message": e.message})
         }
     except Exception as e:
+        print("Unhandled exception:", str(e))
         return {
             "statusCode": 500,
             "body": json.dumps({"success": False, "message": "Internal Error"})
