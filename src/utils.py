@@ -1,5 +1,8 @@
-import razorpay
 # utils.py
+import hmac
+import hashlib
+
+import razorpay
 import os
 import boto3
 import uuid
@@ -10,10 +13,40 @@ from decimal import Decimal
 dynamodb = boto3.resource("dynamodb")
 stack_prefix = os.environ.get("STACK_PREFIX", "dev")
 
+# Razorpay credentials from environment
+razorpay_client = razorpay.Client(
+    auth=(
+        "rzp_test_DK2nhZtPYVl4ni",
+        "n0ST5S201lQmLlOfzEjoQBaQ"
+    )
+)
+
 
 class PaymentManager:
     def __init__(self):
         self.table = dynamodb.Table(f"{stack_prefix}-Payments")
+
+    def verify_razorpay_signature(self, order_id, payment_id, signature):
+        payload = f"{order_id}|{payment_id}".encode("utf-8")
+        secret = "n0ST5S201lQmLlOfzEjoQBaQ"
+        generated_signature = hmac.new(
+            secret.encode("utf-8"),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(generated_signature, signature)
+
+    def create_razorpay_order(self, amount, currency="INR"):
+        # Razorpay expects amount in paise
+        print("make rzorapya mapyasd")
+        order = razorpay_client.order.create({
+            "amount": int(float(amount) * 100),
+            "currency": currency,
+            "payment_capture": 1
+        })
+        print("make rzorapya done",order)
+
+        return order
 
     def get_all(self, tenant_id, **kwargs):
         return self.table.query(
@@ -41,17 +74,17 @@ class PaymentManager:
         item = self.get_by_id(tenant_id, payment_id)
         if not item:
             raise ValueError("Payment not found")
-            
+
         data['updated_on'] = datetime.utcnow().isoformat()
         update_expr = "SET " + ", ".join(
             f"{k}=:{k}" for k in data if k not in ['tenant_id', 'payment_id']
         )
-        
+
         self.table.update_item(
             Key={'tenant_id': tenant_id, 'created_on': item['created_on']},
             UpdateExpression=update_expr,
             ExpressionAttributeValues={
-                f":{k}": v for k, v in data.items() 
+                f":{k}": v for k, v in data.items()
                 if k not in ['tenant_id', 'payment_id']
             }
         )
@@ -65,6 +98,14 @@ class PlanManager:
     def get_plan(self, tenant_id):
         response = self.table.get_item(Key={'tenant_id': tenant_id})
         return response.get('Item', {}).get('plan', 'BASIC')
+
+    def add_plan(self, tenant_id, plan):
+        self.table.put_item(Item={
+            'tenant_id': tenant_id,
+            'plan': plan,
+            'created_on': datetime.utcnow().isoformat()
+        })
+        return self.get_plan(tenant_id)
 
     def update_plan(self, tenant_id, new_plan):
         self.table.update_item(

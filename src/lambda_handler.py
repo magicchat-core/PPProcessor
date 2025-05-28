@@ -1,6 +1,3 @@
-import razorpay
-
-
 # lambda_handler.py
 import json
 import os
@@ -11,7 +8,7 @@ from utils import PaymentManager, PlanManager
 from datetime import datetime
 from decimal import Decimal
 
-
+print("arewevener?")
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
@@ -19,7 +16,6 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-# Environment setup
 stack_prefix = os.environ.get("STACK_PREFIX", "dev")
 
 
@@ -46,10 +42,11 @@ def get_me_by_token(func):
             req_url,
             headers={"Accept": "*/*", "Authorization": token}
         )
-        
+
         if response.status_code != 200:
             raise HTTPException("Authentication failed", HTTPStatus.UNAUTHORIZED)
 
+        print(response.json(), "WHATE RIS HSDFSD")
         kwargs["me"] = response.json()
         return func(self, token, *args, **kwargs)
     return wrapper
@@ -71,10 +68,45 @@ class PaymentHandler:
         return self.manager.get_by_id(me['id'], payment_id)
 
     @get_me_by_token
-    def add_payment(self, token, body, me):
-        body['tenant_id'] = me['id']
-        body['created_on'] = datetime.utcnow().isoformat()
-        return self.manager.create(me['id'], body)
+    def add_payment(self, token, body, query, me,):
+        print("add_payment")
+        action = query.get("action","order")
+        currency = body.get('currency', 'INR')
+        
+        if action == "order":
+            amount = body.get('amount')
+            if not amount:
+                raise HTTPException("Missing amount", HTTPStatus.BAD_REQUEST)
+
+            razorpay_order = self.manager.create_razorpay_order(amount, currency)
+            body['razorpay_order_id'] = razorpay_order['id']
+            body['tenant_id'] = me['id']
+            body['created_on'] = datetime.utcnow().isoformat()
+            body['currency'] = currency
+            return self.manager.create(me['id'], body)
+
+        elif action == "payment":
+            razorpay_order_id = body.get("razorpay_order_id")
+            razorpay_payment_id = body.get("razorpay_payment_id")
+            razorpay_signature = body.get("razorpay_signature")
+
+            if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
+                raise HTTPException("Missing Razorpay payment details", HTTPStatus.BAD_REQUEST)
+
+            if not self.manager.verify_razorpay_signature(
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature
+            ):
+                raise HTTPException("Invalid payment signature", HTTPStatus.UNAUTHORIZED)
+
+            body['tenant_id'] = me['id']
+            body['verified_on'] = datetime.utcnow().isoformat()
+            return self.manager.create(me['id'], body)
+
+        else:
+            raise HTTPException("Invalid action", HTTPStatus.BAD_REQUEST)
+
 
     @get_me_by_token
     def update_payment(self, token, body, me):
@@ -91,6 +123,18 @@ class PlanHandler:
     @get_me_by_token
     def get_tenant_plan(self, token, query, me):
         return self.manager.get_plan(me['id'])
+
+    @get_me_by_token
+    def add_tenant_plan(self, token, body, me):
+        plan = body.get("plan", "BASIC")
+        return self.manager.add_plan(me['id'], plan)
+
+    @get_me_by_token
+    def update_tenant_plan(self, token, body, me):
+        new_plan = body.get("plan")
+        if not new_plan:
+            raise HTTPException("Missing plan", HTTPStatus.BAD_REQUEST)
+        return self.manager.update_plan(me['id'], new_plan)
 
 
 def lambda_function(event, context):
@@ -109,16 +153,29 @@ def lambda_function(event, context):
         elif path.endswith("/get_payment") and method == "GET":
             response = payment_handler.get_payment(token, query)
         elif path.endswith("/add_payment") and method == "POST":
-            response = payment_handler.add_payment(token, body)
+            print("sfsahfosfsdf")
+            response = payment_handler.add_payment(token, body, query)
         elif path.endswith("/update_payment") and method == "PUT":
             response = payment_handler.update_payment(token, body)
         elif path.endswith("/get_tenant_plan") and method == "GET":
             response = plan_handler.get_tenant_plan(token, query)
+        elif path.endswith("/add_tenant_plan") and method == "POST":
+            response = plan_handler.add_tenant_plan(token, body)
+        elif path.endswith("/update_tenant_plan") and method == "PUT":
+            response = plan_handler.update_tenant_plan(token, body)
+            
         else:
             raise HTTPException("Not Found", HTTPStatus.NOT_FOUND)
 
         return {
             "statusCode": HTTPStatus.OK,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization;X-API-Key',
+                'Access-Control-Allow-Credentials': 'true'
+            },
             "body": json.dumps({"success": True, "data": response}, cls=DecimalEncoder)
         }
 
