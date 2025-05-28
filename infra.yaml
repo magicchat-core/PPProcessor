@@ -388,7 +388,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: add_tenant_plan
+      PathPart: update_tenant_plan
 
   UpdateTenantPlanApiGatewayMethod:
     Type: AWS::ApiGateway::Method
