@@ -1,5 +1,3 @@
-
-
 Parameters:
   StackPrefix:
     Type: String
@@ -11,36 +9,56 @@ Parameters:
   ReqZipKey:
     Type: String
 
-
 Conditions:
   IsProd: !Equals [!Ref StackPrefix, "prod"]
   UseCustomDomain: !Or
     - !Equals [!Ref StackPrefix, "prod"]
     - !Equals [!Ref StackPrefix, "dev"]
 
-
-
 Resources:
-
   DynamoDBTable1:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${StackPrefix}-LiveStatusData"
+      TableName: !Sub "${StackPrefix}-Payments"
       AttributeDefinitions:
-        - AttributeName: tenant
-          AttributeType: S  # String type for partition key
-        - AttributeName: sort_key
-          AttributeType: S  # String type for sort key
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: created_on
+          AttributeType: S
+        - AttributeName: payment_id
+          AttributeType: S
       KeySchema:
-        - AttributeName: tenant
-          KeyType: HASH  # Partition key
-        - AttributeName: sort_key
-          KeyType: RANGE  # Sort key
+        - AttributeName: tenant_id
+          KeyType: HASH
+        - AttributeName: created_on
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: PaymentIdIndex
+          KeySchema:
+            - AttributeName: payment_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
-
+  TenantPlansTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackPrefix}-TenantPlans"
+      AttributeDefinitions:
+        - AttributeName: tenant_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tenant_id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
 
 
@@ -50,37 +68,35 @@ Resources:
       CompatibleRuntimes:
         - python3.9
       Content:
-        # S3Bucket: live-status-bckt
-        S3Bucket: !Sub "${StackPrefix}-live-status-bckt"
+        # S3Bucket: ppprocessor-bckt
+        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
         S3Key: !Ref ReqZipKey
-        
+
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      # FunctionName: LiveStatusHandlerLambda
-      FunctionName: !Sub "${StackPrefix}-LiveStatusHandlerLambda"
+      # FunctionName: PPProcessorHandlerLambda
+      FunctionName: !Sub "${StackPrefix}-PPProcessorHandlerLambda"
       Runtime: python3.9
       Handler: lambda_handler.lambda_function
-      Role: !GetAtt LiveStatusLambdaExecutionLiveStatussRole.Arn
+      Role: !GetAtt PPProcessorLambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub "${StackPrefix}-live-status-bckt"
+        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
         S3Key: !Ref LambdaZipKey
 
       Environment:
         Variables:
           StackPrefix: !Ref StackPrefix
 
-
-
       Timeout: 30
-      Layers: 
+      Layers:
         - !Ref LambdaLayer
 
-  LiveStatusLambdaExecutionLiveStatussRole:
+  PPProcessorLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      # RoleName: LiveStatusLambdaExecutionLiveStatussRole
-      RoleName: !Sub "${StackPrefix}-LiveStatusLambdaExecutionLiveStatussRole"
+      # RoleName: PPProcessorLambdaExecutionRole
+      RoleName: !Sub "${StackPrefix}-PPProcessorLambdaExecutionRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -91,20 +107,23 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-
+      
         - PolicyName: DynamoDBAccessPolicy
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
-                  - 'dynamodb:PutItem'
-                  - 'dynamodb:GetItem'
-                  - 'dynamodb:UpdateItem'
-                  - 'dynamodb:Scan'
-                  - 'dynamodb:Query'
-                  - 'dynamodb:BatchGetItem'
-                Resource: !GetAtt DynamoDBTable1.Arn
+                  - "dynamodb:PutItem"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:UpdateItem"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                  - "dynamodb:BatchGetItem"
+                Resource: 
+                - !GetAtt DynamoDBTable1.Arn
+                - !Sub "${DynamoDBTable1.Arn}/index/PaymentIdIndex"
+                - !GetAtt TenantPlansTable.Arn  # Add new table ARN
 
 
         - PolicyName: S3AccessPolicy
@@ -114,12 +133,12 @@ Resources:
               - Effect: Allow
                 Action:
                   - "s3:ListBucket"
-                Resource: !Sub "arn:aws:s3:::${StackPrefix}-live-status-bckt"
+                Resource: !Sub "arn:aws:s3:::${StackPrefix}-ppprocessor-bckt"
 
               - Effect: Allow
                 Action:
                   - "s3:GetObject"
-                Resource: !Sub "arn:aws:s3:::${StackPrefix}-live-status-bckt/*"
+                Resource: !Sub "arn:aws:s3:::${StackPrefix}-ppprocessor-bckt/*"
 
             # Statement:
             #   - Effect: Allow
@@ -127,8 +146,8 @@ Resources:
             #       - "s3:ListBucket"
             #       - "s3:GetObject"
             #     Resource:
-            #       - "arn:aws:s3:::live-status-bckt"
-            #       - "arn:aws:s3:::live-status-bckt/*"
+            #       - "arn:aws:s3:::ppprocessor-bckt"
+            #       - "arn:aws:s3:::ppprocessor-bckt/*"
 
   ApiGateway:
     Type: AWS::ApiGateway::RestApi
@@ -136,18 +155,18 @@ Resources:
     Properties:
       Name: ApiGateway
 
-  AllLiveStatusAGResource:
+  AllPPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: fetch_all_ls_of_connected_users
+      PathPart: all_payments
 
-  AllLiveStatusApiGatewayMethod:
+  AllPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref AllLiveStatusAGResource
+      ResourceId: !Ref AllPPProcessorAGResource
       HttpMethod: GET
       AuthorizationType: NONE
       Integration:
@@ -169,18 +188,18 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  AddLiveStatusAGResource:
+  AddPPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: add_ls_user
+      PathPart: add_payment
 
-  AddLiveStatusApiGatewayMethod:
+  AddPPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref AddLiveStatusAGResource
+      ResourceId: !Ref AddPPProcessorAGResource
       HttpMethod: POST
       AuthorizationType: NONE
       Integration:
@@ -202,21 +221,18 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-
-
-  UpdateLiveStatusAGResource:
+  UpdatePPProcessorAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: update_ls_user
+      PathPart: update_payment
 
-
-  UpdateLiveStatusApiGatewayMethod:
+  UpdatePPProcessorApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref UpdateLiveStatusAGResource
+      ResourceId: !Ref UpdatePPProcessorAGResource
       HttpMethod: PUT
       AuthorizationType: NONE
       Integration:
@@ -240,18 +256,19 @@ Resources:
 
 
 
-  GetLiveStatusAGResource:
+
+  GetTenantPlanAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: get_app
+      PathPart: get_tenant_plan
 
-  GetLiveStatusApiGatewayMethod:
+  GetTenantPlanApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
-      ResourceId: !Ref GetLiveStatusAGResource
+      ResourceId: !Ref GetTenantPlanAGResource
       HttpMethod: GET
       AuthorizationType: NONE
       Integration:
@@ -273,37 +290,10 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  AllLiveStatusApiGatewayOptions:
+  GetTenantPlanApiGatewayOptions:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref AllLiveStatusAGResource
-      RestApiId: !Ref ApiGateway
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      Integration:
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,user-agent,X-API-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-              method.response.header.Access-Control-Allow-Credentials: "'true'"
-        Type: MOCK
-        PassthroughBehavior: WHEN_NO_MATCH
-        RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
-            method.response.header.Access-Control-Allow-Credentials: true
-
-  GetLiveStatusApiGatewayOptions:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ResourceId: !Ref GetLiveStatusAGResource
+      ResourceId: !Ref GetTenantPlanAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -318,7 +308,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -327,10 +317,227 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-  AddLiveStatusApiGatewayOptions:
+
+
+  AddTenantPlanAGResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: add_tenant_plan
+
+  AddTenantPlanApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref AddLiveStatusAGResource
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref AddTenantPlanAGResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,user-agent,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  AddTenantPlanApiGatewayOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref AddTenantPlanAGResource
+      RestApiId: !Ref ApiGateway
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+
+
+
+  UpdateTenantPlanAGResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: update_tenant_plan
+
+  UpdateTenantPlanApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref UpdateTenantPlanAGResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,user-agent,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,PUT'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  UpdateTenantPlanApiGatewayOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref UpdateTenantPlanAGResource
+      RestApiId: !Ref ApiGateway
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET,PUT'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+
+
+
+
+
+  GetPPProcessorAGResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: get_payment
+
+  GetPPProcessorApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref GetPPProcessorAGResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,user-agent,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  AllPPProcessorApiGatewayOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref AllPPProcessorAGResource
+      RestApiId: !Ref ApiGateway
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,user-agent,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  GetPPProcessorApiGatewayOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref GetPPProcessorAGResource
+      RestApiId: !Ref ApiGateway
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-API-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  AddPPProcessorApiGatewayOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref AddPPProcessorAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -345,7 +552,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -354,11 +561,10 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-
-  UpdateLiveStatusApiGatewayOptions:
+  UpdatePPProcessorApiGatewayOptions:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref UpdateLiveStatusAGResource
+      ResourceId: !Ref UpdatePPProcessorAGResource
       RestApiId: !Ref ApiGateway
       AuthorizationType: NONE
       HttpMethod: OPTIONS
@@ -373,7 +579,7 @@ Resources:
         Type: MOCK
         PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: "{\"statusCode\": 200}"
+          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -382,32 +588,30 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Credentials: true
 
-
-
-
   MyApiGatewayBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
       # DomainName: !Ref MyApiGatewayCustomDomain
       DomainName: !If
         - UseCustomDomain
-        - !ImportValue 
-            Fn::Sub: "${StackPrefix}-livestatus-CustomDomainName"
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-ppprocessor-CustomDomainName"
         - !Ref "AWS::NoValue"
       RestApiId: !Ref ApiGateway
       # Stage: !Ref MyApiGatewayStage
 
-
-
-
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - AllLiveStatusApiGatewayMethod
-      - AddLiveStatusApiGatewayMethod
-      - GetLiveStatusApiGatewayMethod
-      - UpdateLiveStatusApiGatewayMethod
-      
+      - AllPPProcessorApiGatewayMethod
+      - AddPPProcessorApiGatewayMethod
+      - GetPPProcessorApiGatewayMethod
+      - UpdatePPProcessorApiGatewayMethod
+
+      - GetTenantPlanApiGatewayMethod
+      - AddTenantPlanApiGatewayMethod
+      - UpdateTenantPlanApiGatewayMethod
+
     Properties:
       RestApiId: !Ref ApiGateway
 

@@ -23,36 +23,34 @@ Parameters:
     Type: String
     Description: "The ARN of the ACM certificate."
 
-
 Resources:
   MyApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
     Properties:
-      DomainName: !If 
+      DomainName: !If
         - IsProd
-        - !Sub "livestatus.${HostedZoneName}"
-        - !Sub "livestatus.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
       EndpointConfiguration:
         Types:
           - REGIONAL
-      RegionalCertificateArn: !Ref CertArn #!Sub "livestatus.${CertArn}"
+      RegionalCertificateArn: !Ref CertArn #!Sub "ppprocessor.${CertArn}"
 
   ApiGatewayDNSRecord:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Sub "${HostedZoneId}" #Z0713577I1DBW766CFL9  # Use the HostedZoneId directly
-      Name: !If 
+      Name: !If
         - IsProd
-        - !Sub "livestatus.${HostedZoneName}"
-        - !Sub "livestatus.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
+        - !Sub "payment.${HostedZoneName}"
       Type: A
       AliasTarget:
         DNSName: !GetAtt MyApiGatewayCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt MyApiGatewayCustomDomain.RegionalHostedZoneId
 
-
 Outputs:
   CustomDomainName:
     Value: !Ref MyApiGatewayCustomDomain
     Export:
-      Name: !Sub "${StackPrefix}-livestatus-CustomDomainName"
+      Name: !Sub "${StackPrefix}-ppprocessor-CustomDomainName"

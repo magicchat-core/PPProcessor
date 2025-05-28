@@ -1,111 +1,197 @@
-import os
+# lambda_handler.py
 import json
-from common import HTTPException, standard_response, parse_body
-from users import update_ls_with_token, add_ls, query_dynamodb_for_app, get_ls_by_api_key, update_ls_with_x_api_key, get_ls_by_token
+import os
+import requests
+from functools import wraps
+from http import HTTPStatus
+from utils import PaymentManager, PlanManager
+from datetime import datetime
+from decimal import Decimal
+from botocore.exceptions import ClientError
 
-stack_prefix = os.environ.get('StackPrefix')
+print("arewevener?")
 
-def lambda_function(event, context):
-    try:
-        path = event.get("path", "")
-        if path == f"/{stack_prefix}/fetch_all_ls_of_connected_users":
-            return standard_response(501, {"error": "Not Implemented"})
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super().default(obj)
 
-        elif path == f"/{stack_prefix}/get_app":
-            query_params = event.get("queryStringParameters", {}) or {}
-            token = event.get('headers', {}).get('Authorization')
-            x_api_key = event.get('headers', {}).get('x-api-key')
-            print("here is tokx_api_keyen",token,x_api_key)
+stack_prefix = os.environ.get("STACK_PREFIX", "dev")
 
-            if token:
-                print("where way arer1")
-                result = get_ls_by_token(token, query_params)
-            elif x_api_key:
-                print("where way arer2")
-                result = get_ls_by_api_key(x_api_key, query_params)
+class HTTPException(Exception):
+    def __init__(self, message, status_code=400):
+        super().__init__(message)
+        self.status_code = status_code
+        self.message = message
 
-    
-    
-            # result = query_dynamodb_for_app(
-            #     u_type=query_params.get("type", "user_type"),
-            #     tenant_name=query_params.get("tenant_name"),
-            #     version=query_params.get("version"),
-            #     app_name=query_params.get("app_name"),
-            #     user_id=query_params.get("user_id"),
-            #     uid_key=query_params.get("uid_key","id"),
-            #     app_type=query_params.get("app_type", "P2A")
-            # )
+def get_me_by_token(func):
+    @wraps(func)
+    def wrapper(self, token, *args, **kwargs):
+        if not token:
+            raise HTTPException("Unauthorized!", HTTPStatus.UNAUTHORIZED)
 
-            # result = {"anmy":"thing"}
-            return standard_response(200, result)
+        req_url = (
+            "https://auth.magichat.io/prod/me"
+            if stack_prefix == "prod"
+            else "https://auth.addchat.tech/dev/me"
+        )
 
-        elif path == f"/{stack_prefix}/add_ls_user":
-            body = parse_body(event)
-            result = add_ls(body)
-            return standard_response(200, result)
+        response = requests.get(
+            req_url,
+            headers={"Accept": "*/*", "Authorization": token}
+        )
 
-        elif path == f"/{stack_prefix}/update_ls_user":
-            token = event.get('headers', {}).get('Authorization')
-            body = parse_body(event)
+        if response.status_code != 200:
+            raise HTTPException("Authentication failed", HTTPStatus.UNAUTHORIZED)
 
-            skip_ls_sending = False
+        print(response.json(), "WHATE RIS HSDFSD")
+        kwargs["me"] = response.json()
+        return func(self, token, *args, **kwargs)
+    return wrapper
 
-            if token:
-                print("wehrwersdftoken",token)
+class PaymentHandler:
+    def __init__(self):
+        self.manager = PaymentManager()
 
-                if event.get('queryStringParameters'):
-                    skip_ls_sending = event['queryStringParameters'].get('skip_ls_sending', False)
-                    
-                    
+    @get_me_by_token
+    def get_all_payments(self, token, query, me):
+        return self.manager.get_all(me['id'], **query)
 
-                soc_server_ip = body.get('soc_server_ip', "dev.addchat.tech")
+    @get_me_by_token
+    def get_payment(self, token, query, me):
+        payment_id = query.get("payment_id")
+        if not payment_id:
+            raise HTTPException("Missing payment_id", HTTPStatus.BAD_REQUEST)
+        return self.manager.get_by_id(me['id'], payment_id)
 
-                extra = {
-                    "request_body": body,
-                    "skip_ls_sending": skip_ls_sending,
-                    "soc_server_ip": soc_server_ip,
-                    **body  # flatten relevant fields for update_ls_with_x_api_key
-                }
+    @get_me_by_token
+    def add_payment(self, token, body, query, me,):
+        print("add_payment")
+        action = query.get("action","order")
+        currency = body.get('currency', 'INR')
+        
+        if action == "order":
+            amount = body.get('amount')
+            if not amount:
+                raise HTTPException("Missing amount", HTTPStatus.BAD_REQUEST)
 
-                print("whatlewir werextrea",extra)
-                result = update_ls_with_token(token, extra)
-            else:
+            razorpay_order = self.manager.create_razorpay_order(amount, currency)
+            body['razorpay_order_id'] = razorpay_order['id']
+            body['tenant_id'] = me['id']
+            body['created_on'] = datetime.utcnow().isoformat()
+            body['currency'] = currency
+            return self.manager.create(me['id'], body)
 
-                if event.get('queryStringParameters'):
-                    skip_ls_sending = event['queryStringParameters'].get('skip_ls_sending', False)
-                    version = event['queryStringParameters'].get('version', None)
-                    app_name = event['queryStringParameters'].get('app_name', None)
-                    user_id = event['queryStringParameters'].get('user_id', None)
-                    tenant_id = event['queryStringParameters'].get('tenant_id', None)
-                    app_type = event['queryStringParameters'].get('app_type', None)
-                
-                if not version and not app_name:
-                    raise HTTPException(400, "version and app_name are required in query params")
+        elif action == "payment":
+            razorpay_order_id = body.get("razorpay_order_id")
+            razorpay_payment_id = body.get("razorpay_payment_id")
+            razorpay_signature = body.get("razorpay_signature")
 
-                soc_server_ip = body.get('soc_server_ip', "dev.addchat.tech")
+            if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
+                raise HTTPException("Missing Razorpay payment details", HTTPStatus.BAD_REQUEST)
 
-                extra = {
-                    "version":version,
-                    "app_name":app_name,
-                    "request_body": body,
-                    "skip_ls_sending": skip_ls_sending,
-                    "soc_server_ip": soc_server_ip,
-                    "user_id":user_id,
-                    "tenant_id":tenant_id,
-                    "app_type":app_type,
-                    **body  # flatten relevant fields for update_ls_with_x_api_key
-                }
+            if not self.manager.verify_razorpay_signature(
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature
+            ):
+                raise HTTPException("Invalid payment signature", HTTPStatus.UNAUTHORIZED)
 
+            body['tenant_id'] = me['id']
+            body['verified_on'] = datetime.utcnow().isoformat()
 
-                result = update_ls_with_x_api_key(extra, soc_server_ip)
+            payment = self.manager.create(me['id'], body)
 
-            return standard_response(200, result)
+            try:
+                print("aerweorhwerwer?here")
+                plan_manager = PlanManager()
+                print("fsfssdfme['id']",me['id'],plan_manager)
+                plan_manager.update_plan(me['id'], "ADVANCE")
+            except Exception as e:
+                print(f"Plan upgrade failed: {e}")
+
+            return payment
 
         else:
-            return standard_response(404, {"error": "Endpoint not found"})
+            raise HTTPException("Invalid action", HTTPStatus.BAD_REQUEST)
 
-    except HTTPException as he:
-        return standard_response(he.status_code, {"error": str(he)})
+    @get_me_by_token
+    def update_payment(self, token, body, me):
+        payment_id = body.get("payment_id")
+        if not payment_id:
+            raise HTTPException("Missing payment_id", HTTPStatus.BAD_REQUEST)
+        return self.manager.update(me['id'], payment_id, body)
+
+class PlanHandler:
+    def __init__(self):
+        self.manager = PlanManager()
+
+    @get_me_by_token
+    def get_tenant_plan(self, token, query, me):
+        return self.manager.get_plan(me['id'])
+
+    def add_tenant_plan(self, body):
+        plan = body.get("plan", "BASIC")
+        print("wtuheoytewrt")
+        return self.manager.add_plan(body['tenant_id'], plan)
+
+    @get_me_by_token
+    def update_tenant_plan(self, token, body, me):
+        new_plan = body.get("plan")
+        if not new_plan:
+            raise HTTPException("Missing plan", HTTPStatus.BAD_REQUEST)
+        return self.manager.update_plan(me['id'], new_plan)
+
+def lambda_function(event, context):
+    path = event.get("path", "")
+    method = event.get("httpMethod", "GET").upper()
+    query = event.get("queryStringParameters") or {}
+    body = json.loads(event.get("body") or "{}")
+    token = event.get("headers", {}).get("Authorization")
+
+    payment_handler = PaymentHandler()
+    plan_handler = PlanHandler()
+
+    try:
+        if path.endswith("/all_payments") and method == "GET":
+            response = payment_handler.get_all_payments(token, query)
+        elif path.endswith("/get_payment") and method == "GET":
+            response = payment_handler.get_payment(token, query)
+        elif path.endswith("/add_payment") and method == "POST":
+            print("sfsahfosfsdf")
+            response = payment_handler.add_payment(token, body, query)
+        elif path.endswith("/update_payment") and method == "PUT":
+            response = payment_handler.update_payment(token, body)
+        elif path.endswith("/get_tenant_plan") and method == "GET":
+            response = plan_handler.get_tenant_plan(token, query)
+        elif path.endswith("/add_tenant_plan") and method == "POST":
+            response = plan_handler.add_tenant_plan(body)
+        elif path.endswith("/update_tenant_plan") and method == "PUT":
+            response = plan_handler.update_tenant_plan(token, body)
+        else:
+            raise HTTPException("Not Found", HTTPStatus.NOT_FOUND)
+
+        return {
+            "statusCode": HTTPStatus.OK,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization;X-API-Key',
+                'Access-Control-Allow-Credentials': 'true'
+            },
+            "body": json.dumps({"success": True, "data": response}, cls=DecimalEncoder)
+        }
+
+    except HTTPException as e:
+        return {
+            "statusCode": e.status_code,
+            "body": json.dumps({"success": False, "message": e.message})
+        }
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return standard_response(500, {"error": "Internal server error"})
+        print("Unhandled exception:", str(e))
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"success": False, "message": "Internal Error"})
+        }

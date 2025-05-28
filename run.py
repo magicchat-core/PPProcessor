@@ -83,7 +83,7 @@ if __name__ == "__main__":
     requirements_zip = "temp/requirements.zip"
     bucket_template_file = "bucket.yaml"
     bucket_stack_name = "MyLiveStatusBct"
-    s3_bucket_name = "live-status-bckt"
+    s3_bucket_name = "ppprocessor-bckt"
     infra_template_file = "infra.yaml"
     infra_stack_name = "MyLiveStatusBStck"
     capabilities = "CAPABILITY_NAMED_IAM"
