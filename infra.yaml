@@ -382,7 +382,6 @@ Resources:
 
 
 
-
   UpdateTenantPlanAGResource:
     Type: AWS::ApiGateway::Resource
     Properties:
