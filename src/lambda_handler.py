@@ -31,11 +31,8 @@ def get_me_by_token(func):
         if not token:
             raise HTTPException("Unauthorized!", HTTPStatus.UNAUTHORIZED)
 
-        req_url = (
-            "https://auth.magichat.io/prod/me"
-            if stack_prefix == "prod"
-            else "https://auth.addchat.tech/dev/me"
-        )
+        domain_base_with_env_suffix = "magicchat.io/prod" if stack_prefix == "prod" else "addchat.tech/dev"
+        req_url = f"https://auth.{domain_base_with_env_suffix}/me"
 
         response = requests.get(
             req_url,
