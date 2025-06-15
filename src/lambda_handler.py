@@ -125,13 +125,20 @@ class PlanHandler:
         self.manager = PlanManager()
 
     @get_me_by_token
-    def get_tenant_plan(self, token, query, me):
+    def get_tenant_plan_by_token(self, token, query, me):
         return self.manager.get_plan(me['id'])
 
+    def get_tenant_plan_by_tenant_id(self,query):
+        tenant_id = query.get("tenant_id")
+        print(query, "here  terwetenant_id",tenant_id)
+        return self.manager.get_plan(tenant_id)
+  
+  
     def add_tenant_plan(self, body):
         plan = body.get("plan", "BASIC")
-        print("wtuheoytewrt")
-        return self.manager.add_plan(body['tenant_id'], plan)
+        tenant_id = body['tenant_id']
+        return self.manager.add_plan(tenant_id, plan)
+
 
     @get_me_by_token
     def update_tenant_plan(self, token, body, me):
@@ -160,9 +167,15 @@ def lambda_function(event, context):
             response = payment_handler.add_payment(token, body, query)
         elif path.endswith("/update_payment") and method == "PUT":
             response = payment_handler.update_payment(token, body)
+
         elif path.endswith("/get_tenant_plan") and method == "GET":
-            response = plan_handler.get_tenant_plan(token, query)
+            if token:
+                response = plan_handler.get_tenant_plan_by_token(token, query)
+            else:
+                response = plan_handler.get_tenant_plan_by_tenant_id(query)
+
         elif path.endswith("/add_tenant_plan") and method == "POST":
+            print("arewe coming here?")
             response = plan_handler.add_tenant_plan(body)
         elif path.endswith("/update_tenant_plan") and method == "PUT":
             response = plan_handler.update_tenant_plan(token, body)

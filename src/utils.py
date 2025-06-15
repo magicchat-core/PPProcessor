@@ -114,17 +114,17 @@ class PlanManager:
 
     def get_plan(self, tenant_id):
         response = self.table.get_item(Key={'tenant_id': tenant_id})
-        return response.get('Item', {}).get('plan', 'BASIC')
+        return response.get('Item', {}).get('plan')
 
     def add_plan(self, tenant_id, plan):
         print("arrrrr v here?", str(tenant_id), plan)
         res = self.table.put_item(Item={
-            'tenant_id': tenant_id,
+            'tenant_id': str(tenant_id),
             'plan': plan,
             'created_on': datetime.utcnow().isoformat()
         })
         print("done", res)
-        return self.get_plan(tenant_id)
+        return res
 
     def update_plan(self, tenant_id, new_plan):
         response = self.table.update_item(
