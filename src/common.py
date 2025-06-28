@@ -36,6 +36,7 @@ def standard_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         return json.loads(event.get('body', '{}'))
