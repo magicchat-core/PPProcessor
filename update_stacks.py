@@ -32,7 +32,9 @@ if __name__ == "__main__":
         "infra_params": {
             "StackPrefix": env_name,
             "LambdaZipKey": lambda_zip_name,
-            "ReqZipKey": requirements_zip_name
+            "ReqZipKey": requirements_zip_name,
+            "DeploymentTimestamp":timestamp
+
         }
     }
 
