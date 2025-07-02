@@ -17,7 +17,7 @@ class DecimalEncoder(json.JSONEncoder):
             return int(obj) if obj % 1 == 0 else float(obj)
         return super().default(obj)
 
-stack_prefix = os.environ.get("STACK_PREFIX", "dev")
+stack_prefix = os.environ.get("StackPrefix", "dev")
 
 class HTTPException(Exception):
     def __init__(self, message, status_code=400):

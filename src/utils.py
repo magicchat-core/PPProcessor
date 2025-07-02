@@ -11,7 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 
 dynamodb = boto3.resource("dynamodb")
-stack_prefix = os.environ.get("STACK_PREFIX", "dev")
+stack_prefix = os.environ.get("StackPrefix", "dev")
 
 # Razorpay credentials from environment
 razorpay_client = razorpay.Client(
