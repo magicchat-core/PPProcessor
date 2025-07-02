@@ -8,6 +8,10 @@ Parameters:
 
   ReqZipKey:
     Type: String
+  
+  DeploymentTimestamp:
+    Type: String
+    Description: "Unique identifier to force new deployments"
 
 Conditions:
   IsProd: !Equals [!Ref StackPrefix, "prod"]
@@ -614,6 +618,8 @@ Resources:
 
     Properties:
       RestApiId: !Ref ApiGateway
+      Description: Deployment at !Sub "${DeploymentTimestamp}"
+
 
   ApiGatewayStage:
     Type: AWS::ApiGateway::Stage
