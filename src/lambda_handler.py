@@ -163,9 +163,9 @@ class SettingsHandler:
         except ClientError as e:
             raise HTTPException(f"DynamoDB error: {e.response['Error']['Message']}", HTTPStatus.INTERNAL_SERVER_ERROR)
 
-    @get_me_by_token
-    def add_settings(self, token, body, me):
-        tenant_id = me['id']
+    # @get_me_by_token
+    def add_settings(self, body):
+        tenant_id = body['tenant_id']
         settings = body.get('settings')
         if not settings:
             raise HTTPException("Missing settings", HTTPStatus.BAD_REQUEST)
@@ -234,16 +234,16 @@ def lambda_function(event, context):
         elif path.endswith("/update_tenant_plan") and method == "PUT":
             response = plan_handler.update_tenant_plan(token, body)
 
-        elif path == '/get_global_settings' and method == 'GET':
+        elif path.endswith('/get_global_settings') and method == 'GET':
             tenant_id = query.get('tenant_id')
             if not tenant_id:
                 raise HTTPException("Missing tenant_id", HTTPStatus.BAD_REQUEST)
             response = settings_handler.get_settings(tenant_id)
 
-        elif path == '/add_global_settings' and method == 'POST':
-            response = settings_handler.add_settings(token, body)
+        elif path.endswith('/add_global_settings') and method == 'POST':
+            response = settings_handler.add_settings(body)
 
-        elif path == '/update_global_settings' and method == 'PUT':
+        elif path.endswith('/update_global_settings') and method == 'PUT':
             response = settings_handler.update_settings(token, body)
         else:
             raise HTTPException("Not Found", HTTPStatus.NOT_FOUND)
