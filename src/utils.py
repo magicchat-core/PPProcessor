@@ -36,7 +36,7 @@ class PaymentManager:
         ).hexdigest()
         return hmac.compare_digest(generated_signature, signature)
 
-    def create_razorpay_order(self, amount, currency="INR"):
+    def create_razorpay_order(self, amount, currency="USD"):
         # Razorpay expects amount in paise
         print("make rzorapya mapyasd")
         order = razorpay_client.order.create({

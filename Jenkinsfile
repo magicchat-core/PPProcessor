@@ -1,9 +1,9 @@
 pipeline {
-    agent none  // This ensures that the pipeline doesn't run on any agent by default
+    agent none
 
     stages {
         stage('Checkout SCM') {
-            agent { label 'node1' }  // Ensures this stage runs on 'node1' (the slave node)
+            agent { label 'node1' }
             steps {
                 script {
                     checkout scm
@@ -12,41 +12,56 @@ pipeline {
         }
 
         stage('Build & Deploy') {
-            agent { label 'node1' }  // Ensures this stage runs on 'node1' (the slave node)
+            agent { label 'node1' }
             steps {
                 script {
-                    // Check if the AWS CLI works by calling its full path
-                    sh '/usr/local/bin/aws --version'  // Full path to AWS CLI
+                    sh """
+                        set -e
 
-                    // Use bash explicitly to activate the virtual environment
-                    sh '''
-                        # Explicitly use bash to activate the virtual environment
-                        bash -c "source ~/artifactory_py_packages/cloud_utils/artificator_env/bin/activate && echo 'Virtual environment activated.'"
-                        
-                        # Check which Python is being used
-                        bash -c "which python3"
-                        
-                        # Explicitly use the virtual environment's Python interpreter
-                        ~/artifactory_py_packages/cloud_utils/artificator_env/bin/python3 -c "import cloud_utils"
-                        echo "Cloud utils package imported successfully."
+                        BRANCH_NAME="${env.BRANCH_NAME}"
+                        echo \"🌿 Current branch: \$BRANCH_NAME\"
 
-                         # Run update_stacks.py only if branch is dev or master
-                        if [ "$BRANCH_NAME" = "dev" ]; then
-                            echo "Running update_stacks.py for dev branch"
+                        echo \"📦 Cloning repo if not present\"
+                        git clone git@github.com:magicchat-core/serverless_infra.git || true
+
+                        echo \"🐍 Creating virtual environment (if not exists)\"
+                        python3 -m venv ~/artifactory_py_packages/cloud_utils/artificator_env || true
+
+                        echo \"🔧 Activating virtual environment\"
+                        . ~/artifactory_py_packages/cloud_utils/artificator_env/bin/activate
+
+                        echo \"🔁 Reinstalling private repo in editable mode\"
+                        rm -rf ~/serverless_infra
+                        git clone git@github.com:magicchat-core/serverless_infra.git ~/serverless_infra
+
+                        echo \"📥 Installing in editable mode\"
+                        pip install -e ~/serverless_infra
+
+                        echo \"🛠  Setting PYTHONPATH\"
+                        export PYTHONPATH=~/serverless_infra:\$PYTHONPATH
+
+                        echo \"🔎 Checking import\"
+                        python -c "import cloud_utils; print('✅ cloud_utils import successful')"
+
+                        echo \"✅ Cloud utils package imported successfully.\"
+
+                        # Run update_stacks.py only if branch is dev or master
+                        if [ \"\$BRANCH_NAME\" = \"dev\" ]; then
+                            echo \"🚀 Running update_stacks.py for dev branch\"
                             ~/artifactory_py_packages/cloud_utils/artificator_env/bin/python3 update_stacks.py dev
-                        elif [ "$BRANCH_NAME" = "master" ]; then
-                            echo "Running update_stacks.py for master branch"
+                        elif [ \"\$BRANCH_NAME\" = \"master\" ]; then
+                            echo \"🚀 Running update_stacks.py for master branch\"
                             ~/artifactory_py_packages/cloud_utils/artificator_env/bin/python3 update_stacks.py prod
                         else
-                            echo "Skipping stack update. Current branch: $BRANCH_NAME"
+                            echo \"⚠️ Skipping stack update. Current branch: \$BRANCH_NAME\"
                         fi
-                        
-                    '''
+                    """
+
+
                 }
             }
         }
     }
-
 
     post {
         success {
