@@ -11,7 +11,7 @@ custom_stack_name_suffix = "-ppprocessor-custom-domain"
 
 # Define Hosted Zone details
 hosted_zone_details = {
-    "dev": ("addchat.tech", "Z0713577I1DBW766CFL9", "arn:aws:acm:ap-south-1:454363227668:certificate/c0176ce1-23a9-4cfc-9b97-54a2b3a06534"),
+    "dev": ("addchat.tech", "Z0864672280UKKODZLY6", "arn:aws:acm:ap-south-1:062093044041:certificate/e52db3c6-a8f7-45d9-b63b-819499a391eb"),
     "prod": ("magicchat.io", "Z10112261IW41B5B2W4P7", "arn:aws:acm:ap-south-1:454363227668:certificate/dd851079-b3ec-4362-8c50-b8d748200c01")
 }
 
