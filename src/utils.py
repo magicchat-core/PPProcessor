@@ -22,7 +22,7 @@ stack_prefix = os.environ.get("StackPrefix", "dev")
 razorpay_client = razorpay.Client(
     auth=(
         "rzp_test_RMogx51YNjGmay",
-        "rzp_test_RMogx51YNjGmay"
+        "I6iGphtRi3o8M333rdJ3SBp1"
     )
 )
 
@@ -33,7 +33,7 @@ class PaymentManager:
 
     def verify_razorpay_signature(self, order_id, payment_id, signature):
         payload = f"{order_id}|{payment_id}".encode("utf-8")
-        secret = "rzp_test_RMogx51YNjGmay"
+        secret = "I6iGphtRi3o8M333rdJ3SBp1"
         generated_signature = hmac.new(
             secret.encode("utf-8"),
             payload,
@@ -41,7 +41,7 @@ class PaymentManager:
         ).hexdigest()
         return hmac.compare_digest(generated_signature, signature)
 
-    def create_razorpay_order(self, amount, currency="USD"):
+    def create_razorpay_order(self, amount, currency="INR"):
         # Razorpay expects amount in paise
         print("make rzorapya mapyasd")
         order = razorpay_client.order.create({
