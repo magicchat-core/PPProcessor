@@ -13,11 +13,16 @@ from decimal import Decimal
 dynamodb = boto3.resource("dynamodb")
 stack_prefix = os.environ.get("StackPrefix", "dev")
 
+# SMTPSERVER = os.environ.get("rzp_test_RMogx51YNjGmay")
+# SMTPPORT = int(os.environ.get("rzp_test_RMogx51YNjGmay"))
+
+
+
 # Razorpay credentials from environment
 razorpay_client = razorpay.Client(
     auth=(
-        "rzp_test_DK2nhZtPYVl4ni",
-        "n0ST5S201lQmLlOfzEjoQBaQ"
+        "rzp_test_RMogx51YNjGmay",
+        "I6iGphtRi3o8M333rdJ3SBp1"
     )
 )
 
@@ -28,7 +33,7 @@ class PaymentManager:
 
     def verify_razorpay_signature(self, order_id, payment_id, signature):
         payload = f"{order_id}|{payment_id}".encode("utf-8")
-        secret = "n0ST5S201lQmLlOfzEjoQBaQ"
+        secret = "I6iGphtRi3o8M333rdJ3SBp1"
         generated_signature = hmac.new(
             secret.encode("utf-8"),
             payload,
@@ -36,7 +41,7 @@ class PaymentManager:
         ).hexdigest()
         return hmac.compare_digest(generated_signature, signature)
 
-    def create_razorpay_order(self, amount, currency="USD"):
+    def create_razorpay_order(self, amount, currency="INR"):
         # Razorpay expects amount in paise
         print("make rzorapya mapyasd")
         order = razorpay_client.order.create({

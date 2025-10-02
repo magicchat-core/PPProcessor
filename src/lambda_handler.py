@@ -69,7 +69,7 @@ class PaymentHandler:
     def add_payment(self, token, body, query, me):
         print("Processing payment")
         action = query.get("action", "order")
-        currency = body.get('currency', 'USD')
+        currency = body.get('currency', 'INR')
         
         if action == "order":
             amount = body.get('amount')
