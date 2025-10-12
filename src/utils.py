@@ -14,7 +14,7 @@ dynamodb = boto3.resource("dynamodb")
 stack_prefix = os.environ.get("StackPrefix", "dev")
 
 RazApiKey = os.environ.get("RazApiKey")
-RazSecr = int(os.environ.get("RazSecr"))
+RazSecr = os.environ.get("RazSecr")
 
 
 
