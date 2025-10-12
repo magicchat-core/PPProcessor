@@ -13,16 +13,16 @@ from decimal import Decimal
 dynamodb = boto3.resource("dynamodb")
 stack_prefix = os.environ.get("StackPrefix", "dev")
 
-# SMTPSERVER = os.environ.get("rzp_test_RMogx51YNjGmay")
-# SMTPPORT = int(os.environ.get("rzp_test_RMogx51YNjGmay"))
+RazApiKey = os.environ.get("RazApiKey")
+RazSecr = int(os.environ.get("RazSecr"))
 
 
 
 # Razorpay credentials from environment
 razorpay_client = razorpay.Client(
     auth=(
-        "rzp_test_RMogx51YNjGmay",
-        "I6iGphtRi3o8M333rdJ3SBp1"
+        RazApiKey,
+        RazSecr
     )
 )
 

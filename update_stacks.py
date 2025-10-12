@@ -33,7 +33,9 @@ if __name__ == "__main__":
             "StackPrefix": env_name,
             "LambdaZipKey": lambda_zip_name,
             "ReqZipKey": requirements_zip_name,
-            "DeploymentTimestamp":timestamp
+            "DeploymentTimestamp":timestamp,
+            "RazApiKey" : raz_creds[env_name].get("api_key"),
+            "RazSecr" : raz_creds[env_name].get("secret"),
 
         }
     }
