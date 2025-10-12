@@ -9,6 +9,12 @@ Parameters:
   ReqZipKey:
     Type: String
 
+  RazApiKey:
+    Type: String
+
+  RazSecr:
+    Type: String
+
   DeploymentTimestamp:
     Type: String
     Description: "Unique identifier to force new deployments"
@@ -103,6 +109,9 @@ Resources:
       Environment:
         Variables:
           StackPrefix: !Ref StackPrefix
+          RazApiKey: !Ref RazApiKey
+          RazSecr: !Ref RazSecr
+
 
       Timeout: 30
       Layers:

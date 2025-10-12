@@ -15,6 +15,29 @@ hosted_zone_details = {
     "prod": ("magicchat.io", "Z09504461EPALMGKC9JHP", "arn:aws:acm:ap-south-1:062093044041:certificate/9c3422ec-065e-4596-b20e-7fa9f493b27f")
 }
 
+
+raz_creds = {
+
+"dev": {
+
+    "api_key" : 'rzp_test_RMogx51YNjGmay',
+    "secret" : "I6iGphtRi3o8M333rdJ3SBp1"
+
+    },
+
+    "prod": {
+
+
+    "api_key" : 'rzp_live_RsjKfKqIOTj4ND',
+    "secret" : "pdcYqbBbH6rFM84YyBVT5Ufa"
+
+    },
+
+}
+
+
+
+
 # MUST BE CHANGED
 # HostedZoneId = "Z0713577I1DBW766CFL9"
 # HostedZoneName = "addchat.tech"
