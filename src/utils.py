@@ -54,6 +54,7 @@ class PaymentManager:
         return order
 
     def get_all(self, tenant_id, **kwargs):
+        print("for whichr ewrew",tenant_id)
         return self.table.query(
             KeyConditionExpression=Key('tenant_id').eq(tenant_id)
         )['Items']
@@ -121,11 +122,12 @@ class PlanManager:
         response = self.table.get_item(Key={'tenant_id': tenant_id})
         return response.get('Item', {}).get('plan')
 
-    def add_plan(self, tenant_id, plan):
+    def add_plan(self, tenant_id, plan, mau_limit=100):
         print("arrrrr v here?", str(tenant_id), plan)
         res = self.table.put_item(Item={
             'tenant_id': str(tenant_id),
             'plan': plan,
+            'mau_limit': mau_limit,
             'created_on': datetime.utcnow().isoformat()
         })
         print("done", res)
