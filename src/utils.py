@@ -54,6 +54,7 @@ class PaymentManager:
         return order
 
     def get_all(self, tenant_id, **kwargs):
+        print("for whichr ewrew",tenant_id)
         return self.table.query(
             KeyConditionExpression=Key('tenant_id').eq(tenant_id)
         )['Items']
