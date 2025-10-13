@@ -138,9 +138,10 @@ class PlanHandler:
     def add_tenant_plan(self, body):
         plan = body.get("plan", "BASIC")
         tenant_id = body.get('tenant_id')
+        mau_limit = body.get('mau_limit')
         if not tenant_id:
             raise HTTPException("Missing tenant_id", HTTPStatus.BAD_REQUEST)
-        return self.manager.add_plan(tenant_id, plan)
+        return self.manager.add_plan(tenant_id, plan, mau_limit)
 
     @get_me_by_token
     def update_tenant_plan(self, token, body, me):
