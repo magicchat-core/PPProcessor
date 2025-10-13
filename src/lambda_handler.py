@@ -70,7 +70,8 @@ class PaymentHandler:
         print("Processing payment")
         action = query.get("action", "order")
         currency = body.get('currency', 'INR')
-        
+        planCode = body.get('planCode')
+
         if action == "order":
             amount = body.get('amount')
             if not amount:
@@ -81,6 +82,7 @@ class PaymentHandler:
             body['tenant_id'] = me['id']
             body['created_on'] = datetime.utcnow().isoformat()
             body['currency'] = currency
+            body['planCode'] = planCode
             return self.manager.create(me['id'], body)
 
         elif action == "payment":
@@ -105,7 +107,7 @@ class PaymentHandler:
 
             try:
                 plan_manager = PlanManager()
-                plan_manager.update_plan(me['id'], "ADVANCE")
+                plan_manager.update_plan(me['id'], planCode)
             except Exception as e:
                 print(f"Plan upgrade failed: {e}")
 
