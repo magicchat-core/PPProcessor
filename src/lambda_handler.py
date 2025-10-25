@@ -71,6 +71,7 @@ class PaymentHandler:
         action = query.get("action", "order")
         currency = body.get('currency', 'INR')
         planCode = body.get('planCode')
+        userLimit = body.get('userLimit',100)
 
         if action == "order":
             amount = body.get('amount')
@@ -83,6 +84,10 @@ class PaymentHandler:
             body['created_on'] = datetime.utcnow().isoformat()
             body['currency'] = currency
             body['planCode'] = planCode
+
+            if planCode == 'ADVANCE2':
+                body['max_users_limit'] = userLimit
+
             return self.manager.create(me['id'], body)
 
         elif action == "payment":
@@ -102,12 +107,13 @@ class PaymentHandler:
 
             body['tenant_id'] = me['id']
             body['verified_on'] = datetime.utcnow().isoformat()
-
+            if planCode == 'ADVANCE2':
+                body['max_users_limit'] = userLimit
             payment = self.manager.create(me['id'], body)
 
             try:
                 plan_manager = PlanManager()
-                plan_manager.update_plan(me['id'], planCode)
+                plan_manager.update_plan(me['id'], planCode, userLimit)
             except Exception as e:
                 print(f"Plan upgrade failed: {e}")
 
@@ -148,6 +154,7 @@ class PlanHandler:
     @get_me_by_token
     def update_tenant_plan(self, token, body, me):
         new_plan = body.get("plan")
+        
         if not new_plan:
             raise HTTPException("Missing plan", HTTPStatus.BAD_REQUEST)
         return self.manager.update_plan(me['id'], new_plan)
