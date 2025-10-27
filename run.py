@@ -20,7 +20,7 @@ def zip_requirements():
         os.makedirs(temp_dir, exist_ok=True)
 
         # Create site-packages directory inside temp_dir
-        site_packages_dir = os.path.join(temp_dir,"python", "lib", "python3.9", "site-packages")
+        site_packages_dir = os.path.join(temp_dir,"python", "lib", "python3.11", "site-packages")
         os.makedirs(site_packages_dir, exist_ok=True)
 
         # Install requirements into site-packages directory
