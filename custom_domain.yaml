@@ -29,8 +29,8 @@ Resources:
     Properties:
       DomainName: !If
         - IsProd
-        - !Sub "payment.${HostedZoneName}"
-        - !Sub "payment.${HostedZoneName}"
+        - !Sub "ppp.${HostedZoneName}"
+        - !Sub "ppp.${HostedZoneName}"
       EndpointConfiguration:
         Types:
           - REGIONAL
@@ -42,8 +42,8 @@ Resources:
       HostedZoneId: !Sub "${HostedZoneId}" #Z0713577I1DBW766CFL9  # Use the HostedZoneId directly
       Name: !If
         - IsProd
-        - !Sub "payment.${HostedZoneName}"
-        - !Sub "payment.${HostedZoneName}"
+        - !Sub "ppp.${HostedZoneName}"
+        - !Sub "ppp.${HostedZoneName}"
       Type: A
       AliasTarget:
         DNSName: !GetAtt MyApiGatewayCustomDomain.RegionalDomainName

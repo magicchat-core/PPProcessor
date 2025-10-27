@@ -11,7 +11,7 @@ custom_stack_name_suffix = "-ppprocessor-custom-domain"
 
 # Define Hosted Zone details
 hosted_zone_details = {
-    "dev": ("addchat.tech", "Z0864672280UKKODZLY6", "arn:aws:acm:ap-south-1:062093044041:certificate/e52db3c6-a8f7-45d9-b63b-819499a391eb"),
+    "dev": ("tezkit.com", "Z03262091HLM16BAV8KPT", "arn:aws:acm:ap-south-1:446636409035:certificate/4fda013e-64e3-4312-a775-249dbbf1987a"),
     "prod": ("magicchat.io", "Z09504461EPALMGKC9JHP", "arn:aws:acm:ap-south-1:062093044041:certificate/9c3422ec-065e-4596-b20e-7fa9f493b27f")
 }
 
@@ -40,5 +40,5 @@ raz_creds = {
 
 # MUST BE CHANGED
 # HostedZoneId = "Z0713577I1DBW766CFL9"
-# HostedZoneName = "addchat.tech"
+# HostedZoneName = "tezkit.com"
 # env_name = "dev"
