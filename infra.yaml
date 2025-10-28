@@ -12,6 +12,11 @@ Parameters:
   RazApiKey:
     Type: String
 
+
+  S3BucketName:
+    Type: String
+
+
   RazSecr:
     Type: String
 
@@ -91,7 +96,7 @@ Resources:
         - python3.11
       Content:
         # S3Bucket: ppprocessor-bckt
-        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
+        S3Bucket: !Ref S3BucketName
         S3Key: !Ref ReqZipKey
 
   LambdaFunction:
@@ -103,7 +108,7 @@ Resources:
       Handler: lambda_handler.lambda_function
       Role: !GetAtt PPProcessorLambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
+        S3Bucket: !Ref S3BucketName
         S3Key: !Ref LambdaZipKey
 
       Environment:
