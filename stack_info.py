@@ -12,7 +12,7 @@ custom_stack_name_suffix = "-ppprocessor-custom-domain"
 # Define Hosted Zone details
 hosted_zone_details = {
     "dev": ("tezkit.com", "Z03262091HLM16BAV8KPT", "arn:aws:acm:ap-south-1:446636409035:certificate/4fda013e-64e3-4312-a775-249dbbf1987a"),
-    "prod": ("magicchat.io", "Z051648722RSGAFYGUTGR", "arn:aws:acm:ap-south-1:062093044041:certificate/9c3422ec-065e-4596-b20e-7fa9f493b27f")
+    "prod": ("magicchat.io", "Z051648722RSGAFYGUTGR", "arn:aws:acm:ap-south-1:165672952961:certificate/c4df38ed-6a90-40e6-a509-8079f68f37b1")
 }
 
 
