@@ -12,6 +12,11 @@ Parameters:
   RazApiKey:
     Type: String
 
+
+  S3BucketName:
+    Type: String
+
+
   RazSecr:
     Type: String
 
@@ -88,10 +93,10 @@ Resources:
     Type: AWS::Lambda::LayerVersion
     Properties:
       CompatibleRuntimes:
-        - python3.9
+        - python3.11
       Content:
         # S3Bucket: ppprocessor-bckt
-        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
+        S3Bucket: !Ref S3BucketName
         S3Key: !Ref ReqZipKey
 
   LambdaFunction:
@@ -99,11 +104,11 @@ Resources:
     Properties:
       # FunctionName: PPProcessorHandlerLambda
       FunctionName: !Sub "${StackPrefix}-PPProcessorHandlerLambda"
-      Runtime: python3.9
+      Runtime: python3.11
       Handler: lambda_handler.lambda_function
       Role: !GetAtt PPProcessorLambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub "${StackPrefix}-ppprocessor-bckt"
+        S3Bucket: !Ref S3BucketName
         S3Key: !Ref LambdaZipKey
 
       Environment:
@@ -111,7 +116,6 @@ Resources:
           StackPrefix: !Ref StackPrefix
           RazApiKey: !Ref RazApiKey
           RazSecr: !Ref RazSecr
-
 
       Timeout: 30
       Layers:

@@ -120,7 +120,7 @@ class PlanManager:
 
     def get_plan(self, tenant_id):
         response = self.table.get_item(Key={'tenant_id': tenant_id})
-        return response.get('Item', {}).get('plan')
+        return response.get('Item', {})
 
     def add_plan(self, tenant_id, plan, mau_limit=100):
         print("arrrrr v here?", str(tenant_id), plan)
@@ -133,12 +133,24 @@ class PlanManager:
         print("done", res)
         return res
 
-    def update_plan(self, tenant_id, new_plan):
+    def update_plan(self, tenant_id, new_plan, new_mau_limit=None):
+        # Base parameters
+        update_expr = "SET #p = :plan"
+        expr_attr_names = {'#p': 'plan'}
+        expr_attr_values = {':plan': new_plan}
+
+        # Only include mau_limit if plan is ADVANCE2
+        if new_plan == "ADVANCE2" and new_mau_limit is not None:
+            update_expr += ", #m = :mau_limit"
+            expr_attr_names['#m'] = 'mau_limit'
+            expr_attr_values[':mau_limit'] = new_mau_limit
+
         response = self.table.update_item(
             Key={'tenant_id': tenant_id},
-            UpdateExpression="SET #p = :val1",
-            ExpressionAttributeNames={'#p': 'plan'},
-            ExpressionAttributeValues={':val1': new_plan},
+            UpdateExpression=update_expr,
+            ExpressionAttributeNames=expr_attr_names,
+            ExpressionAttributeValues=expr_attr_values,
             ReturnValues="UPDATED_NEW"
         )
         return response
+

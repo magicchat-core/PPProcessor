@@ -16,8 +16,8 @@ if __name__ == "__main__":
 
         # print(f"Deploying for branch: {env_name}")
     env_name = args.branch_name
-    requirements_zip_name = f"requirements_{timestamp}.zip"
-    lambda_zip_name = f"lambda_handler_{timestamp}.zip"
+    # requirements_zip_name = f"requirements_{timestamp}.zip"
+    # lambda_zip_name = f"lambda_handler_{timestamp}.zip"
     stack_parameters = {
         "bucket_params": {
             "StackPrefix": env_name,
@@ -31,8 +31,9 @@ if __name__ == "__main__":
         },
         "infra_params": {
             "StackPrefix": env_name,
-            "LambdaZipKey": lambda_zip_name,
-            "ReqZipKey": requirements_zip_name,
+            "LambdaZipKey": "lambda_handler.zip",      # 🎯 Fixed name
+            "ReqZipKey": "requirements.zip",           # 🎯 Fixed name
+            "S3BucketName": env_name+s3_bucket_name,
             "DeploymentTimestamp":timestamp,
             "RazApiKey" : raz_creds[env_name].get("api_key"),
             "RazSecr" : raz_creds[env_name].get("secret"),
