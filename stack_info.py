@@ -28,8 +28,8 @@ raz_creds = {
     "prod": {
 
 
-    "api_key" : 'rzp_live_RsjKfKqIOTj4ND',
-    "secret" : "pdcYqbBbH6rFM84YyBVT5Ufa"
+    "api_key" : 'rzp_live_RgFtPE2GSut9GB',
+    "secret" : "lSiwtIQ5KoWRlSH8fdpw7x8f"
 
     },
 
